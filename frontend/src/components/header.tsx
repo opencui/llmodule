@@ -76,10 +76,10 @@ const Header = ({ meta, link }: any) => {
                         <Icon icon="app" size={8} />
                       </div>{" "}
                     </span>
-                    <div className="pt-1 text-lg ml-14     inline-block">
+                    <div className="pt-1 text-lg ml-14 mt-3    inline-block">
                       <div className=" flex flex-col">
                         <div className="text-base">{meta.title}</div>
-                        <div className="text-xs"> {meta.description}</div>
+                        {/* <div className="text-xs"> {meta.description}</div> */}
                       </div>
                     </div>
                   </a>

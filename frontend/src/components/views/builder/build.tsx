@@ -10,6 +10,8 @@ import {
   Square3Stack3DIcon,
 } from "@heroicons/react/24/outline";
 import ModelsView from "./models";
+import SchemasView from "./schemas";
+import CollectionsView from "./collections";
 
 const BuildView = () => {
   return (
@@ -32,7 +34,7 @@ const BuildView = () => {
                 <div className="w-full  ">
                   {" "}
                   <BugAntIcon className="h-4 w-4 inline-block mr-1" />
-                  Skills
+                  Functions
                 </div>
               ),
               key: "1",
@@ -51,9 +53,31 @@ const BuildView = () => {
             },
             {
               label: (
+                <div className="w-full  ">
+                  {" "}
+                  <CpuChipIcon className="h-4 w-4 inline-block mr-1" />
+                  Schemas
+                </div>
+              ),
+              key: "2.2",
+              children: <SchemasView />,
+            },
+            {
+              label: (
+                <div className="w-full  ">
+                  {" "}
+                  <CpuChipIcon className="h-4 w-4 inline-block mr-1" />
+                  Collections
+                </div>
+              ),
+              key: "2.3",
+              children: <CollectionsView />,
+            },
+            {
+              label: (
                 <>
                   <Square2StackIcon className="h-4 w-4 inline-block mr-1" />
-                  Agents
+                  Signatures
                 </>
               ),
               key: "3",
@@ -63,7 +87,7 @@ const BuildView = () => {
               label: (
                 <>
                   <Square3Stack3DIcon className="h-4 w-4 inline-block mr-1" />
-                  Workflows
+                  Piplines
                 </>
               ),
               key: "4",

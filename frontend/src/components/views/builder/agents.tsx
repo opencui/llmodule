@@ -8,7 +8,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { Dropdown, MenuProps, Modal, message } from "antd";
 import * as React from "react";
-import { IAgent, IStatus } from "../../types";
+import { IAgent, ICollection, IModelConfig, ISchema, ISkill, IStatus } from "../../types";
 import { appContext } from "../../../hooks/provider";
 import {
   fetchJSON,
@@ -20,7 +20,7 @@ import {
 import { BounceLoader, Card, CardHoverBar, LoadingOverlay } from "../../atoms";
 import { AgentViewer } from "./utils/agentconfig";
 
-const AgentsView = ({}: any) => {
+const AgentsView = ({ }: any) => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<IStatus | null>({
     status: true,
@@ -30,13 +30,21 @@ const AgentsView = ({}: any) => {
   const { user } = React.useContext(appContext);
   const serverUrl = getServerUrl();
   const listAgentsUrl = `${serverUrl}/agents?user_id=${user?.email}`;
+  const listSchemasUrl = `${serverUrl}/schemas?user_id=${user?.email}`;
+  const listCollectionsUrl = `${serverUrl}/collections?user_id=${user?.email}`;
+  const listSkillsUrl = `${serverUrl}/skills?user_id=${user?.email}`;
+  const listModelsUrl = `${serverUrl}/models?user_id=${user?.email}`;
 
-  const [agents, setAgents] = React.useState<IAgent[] | null>([]);
+  const [agents, setAgents] = React.useState<IAgent[]>([]);
+  const [schemas, setSchemas] = React.useState<ISchema[]>([]);
+  const [skills, setSkills] = React.useState<ISkill[]>([]);
+  const [collections, setCollections] = React.useState<ICollection[]>([]);
+  const [models, setModels] = React.useState<IModelConfig[]>([]);
   const [selectedAgent, setSelectedAgent] = React.useState<IAgent | null>(null);
 
-  const [showNewAgentModal, setShowNewAgentModal] = React.useState(false);
+  const [showNewDetailComp, setShowNewDetailComp] = React.useState(false);
 
-  const [showAgentModal, setShowAgentModal] = React.useState(false);
+  const [showDetailComp, setShowDetailComp] = React.useState(false);
 
   const sampleAgent = {
     config: {
@@ -109,10 +117,121 @@ const AgentsView = ({}: any) => {
     fetchJSON(listAgentsUrl, payLoad, onSuccess, onError);
   };
 
+  const fetchSchemas = () => {
+    setError(null);
+    setLoading(true);
+    const payLoad = {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    const onSuccess = (data: any) => {
+      if (data && data.status) {
+        setSchemas(data.data);
+      } else {
+        message.error(data.message);
+      }
+      setLoading(false);
+    };
+    const onError = (err: any) => {
+      setError(err);
+      message.error(err.message);
+      setLoading(false);
+    };
+    fetchJSON(listSchemasUrl, payLoad, onSuccess, onError);
+  };
+
+  const fetchSkills = () => {
+    setError(null);
+    setLoading(true);
+    // const fetch;
+    const payLoad = {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    const onSuccess = (data: any) => {
+      if (data && data.status) {
+        // message.success(data.message);
+        console.log("skills", data.data);
+        setSkills(data.data);
+      } else {
+        message.error(data.message);
+      }
+      setLoading(false);
+    };
+    const onError = (err: any) => {
+      setError(err);
+      message.error(err.message);
+      setLoading(false);
+    };
+    fetchJSON(listSkillsUrl, payLoad, onSuccess, onError);
+  };
+
+  const fetchCollections = () => {
+    setError(null);
+    setLoading(true);
+    const payLoad = {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    const onSuccess = (data: any) => {
+      if (data && data.status) {
+        setCollections(data.data);
+      } else {
+        message.error(data.message);
+      }
+      setLoading(false);
+    };
+    const onError = (err: any) => {
+      setError(err);
+      message.error(err.message);
+      setLoading(false);
+    };
+    fetchJSON(listCollectionsUrl, payLoad, onSuccess, onError);
+  };
+
+  const fetchModels = () => {
+    setError(null);
+    setLoading(true);
+    const payLoad = {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    const onSuccess = (data: any) => {
+      if (data && data.status) {
+        setModels(data.data);
+      } else {
+        message.error(data.message);
+      }
+      setLoading(false);
+    };
+    const onError = (err: any) => {
+      setError(err);
+      message.error(err.message);
+      setLoading(false);
+    };
+    fetchJSON(listModelsUrl, payLoad, onSuccess, onError);
+  };
+
   React.useEffect(() => {
     if (user) {
       // console.log("fetching messages", messages);
       fetchAgents();
+      fetchSchemas();
+      fetchSkills();
+      fetchCollections();
+      fetchModels();
     }
   }, []);
 
@@ -149,7 +268,7 @@ const AgentsView = ({}: any) => {
             delete newAgent.id;
           }
           setNewAgent(newAgent);
-          setShowNewAgentModal(true);
+          setShowNewDetailComp(true);
         },
         hoverText: "Make a Copy",
       },
@@ -179,7 +298,7 @@ const AgentsView = ({}: any) => {
           }
           onClick={() => {
             setSelectedAgent(agent);
-            setShowAgentModal(true);
+            setShowDetailComp(true);
           }}
         >
           <div
@@ -202,50 +321,54 @@ const AgentsView = ({}: any) => {
     );
   });
 
-  const AgentModal = ({
+  const AgentDetailComp = ({
     agent,
     setAgent,
-    showAgentModal,
-    setShowAgentModal,
+    showDetailComp,
+    setShowDetailComp,
     handler,
   }: {
     agent: IAgent | null;
     setAgent: (agent: IAgent | null) => void;
-    showAgentModal: boolean;
-    setShowAgentModal: (show: boolean) => void;
+    showDetailComp: boolean;
+    setShowDetailComp: (show: boolean) => void;
     handler?: (agent: IAgent | null) => void;
   }) => {
     const [localAgent, setLocalAgent] = React.useState<IAgent | null>(agent);
 
-    const closeModal = () => {
-      setShowAgentModal(false);
-      if (handler) {
+    const closeDetail = () => {
+      setShowDetailComp(false);
+      if (handler) {g
         handler(localAgent);
       }
     };
 
     return (
-      <Modal
-        title={<>Agent Configuration</>}
-        width={800}
-        open={showAgentModal}
-        onOk={() => {
-          closeModal();
-        }}
-        onCancel={() => {
-          closeModal();
-        }}
-        footer={[]}
-      >
-        {agent && (
-          <AgentViewer
-            agent={localAgent || agent}
-            setAgent={setLocalAgent}
-            close={closeModal}
-          />
-        )}
-        {/* {JSON.stringify(localAgent)} */}
-      </Modal>
+      // <Modal
+      //   title={<>Agent Configuration</>}
+      //   width={800}
+      //   open={showDetailComp}
+      //   onOk={() => {
+      //     closeDetail();
+      //   }}
+      //   onCancel={() => {
+      //     closeDetail();
+      //   }}
+      //   footer={[]}
+      // >
+      agent && showDetailComp && (
+        <AgentViewer
+          agent={localAgent || agent}
+          setAgent={setLocalAgent}
+          schemas={schemas}
+          skills={skills}
+          models={models}
+          agents={agents}
+          collections={collections}
+          close={closeDetail}
+        />
+      )
+      // </Modal>
     );
   };
 
@@ -268,7 +391,7 @@ const AgentsView = ({}: any) => {
               );
             }
             setNewAgent(agent);
-            setShowNewAgentModal(true);
+            setShowNewDetailComp(true);
           } catch (err) {
             message.error(
               "Invalid agent file. Please upload a valid agent file."
@@ -305,32 +428,32 @@ const AgentsView = ({}: any) => {
 
   return (
     <div className="text-primary  ">
-      <AgentModal
+      <AgentDetailComp
         agent={selectedAgent}
         setAgent={setSelectedAgent}
-        setShowAgentModal={setShowAgentModal}
-        showAgentModal={showAgentModal}
+        setShowDetailComp={setShowDetailComp}
+        showDetailComp={showDetailComp}
         handler={(agent: IAgent | null) => {
           fetchAgents();
         }}
       />
 
-      <AgentModal
+      <AgentDetailComp
         agent={newAgent || sampleAgent}
         setAgent={setNewAgent}
-        setShowAgentModal={setShowNewAgentModal}
-        showAgentModal={showNewAgentModal}
+        setShowDetailComp={setShowNewDetailComp}
+        showDetailComp={showNewDetailComp}
         handler={(agent: IAgent | null) => {
           fetchAgents();
         }}
       />
 
-      <div className="mb-2   relative">
+      {!showDetailComp && !showNewDetailComp && <div className="mb-2   relative">
         <div className="     rounded  ">
           <div className="flex mt-2 pb-2 mb-2 border-b">
             <div className="flex-1 font-semibold mb-2 ">
               {" "}
-              Agents ({agentRows.length}){" "}
+              Signatures ({agentRows.length}){" "}
             </div>
             <div>
               <Dropdown.Button
@@ -342,18 +465,18 @@ const AgentsView = ({}: any) => {
                 placement="bottomRight"
                 trigger={["click"]}
                 onClick={() => {
-                  setShowNewAgentModal(true);
+                  setShowNewDetailComp(true);
                 }}
               >
                 <PlusIcon className="w-5 h-5 inline-block mr-1" />
-                New Agent
+                Create
               </Dropdown.Button>
             </div>
           </div>
 
           <div className="text-xs mb-2 pb-1  ">
             {" "}
-            Configure an agent that can reused in your agent workflow{" "}
+            Set up a signature that can be reused in your modules.{" "}
             {selectedAgent?.config.name}
           </div>
           {agents && agents.length > 0 && (
@@ -366,7 +489,7 @@ const AgentsView = ({}: any) => {
           {agents && agents.length === 0 && !loading && (
             <div className="text-sm border mt-4 rounded text-secondary p-2">
               <InformationCircleIcon className="h-4 w-4 inline mr-1" />
-              No agents found. Please create a new agent.
+              No signature found. Please create a new signature.
             </div>
           )}
 
@@ -378,7 +501,8 @@ const AgentsView = ({}: any) => {
             </div>
           )}
         </div>
-      </div>
+      </div> || ""
+      }
     </div>
   );
 };

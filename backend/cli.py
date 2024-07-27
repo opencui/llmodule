@@ -40,7 +40,7 @@ def ui(
         os.environ["AUTOGENSTUDIO_DATABASE_URI"] = database_uri
 
     uvicorn.run(
-        "autogenstudio.web.app:app",
+        "backend.web.app:app",
         host=host,
         port=port,
         workers=workers,

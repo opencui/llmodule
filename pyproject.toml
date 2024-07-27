@@ -3,7 +3,7 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "autogenstudio"
+name = "backend"
 authors = [
   { name="AutoGen Team", email="autogen@microsoft.com" },
 ]
@@ -24,8 +24,13 @@ dependencies = [
     "typer",
     "uvicorn",
     "arxiv",
+    "ast",
+    "astor",
+    "jinja2",
     "pyautogen[gemini]>=0.2.0",
     "python-dotenv",
+    "pyjson5",
+    "dspy-ai",
     "websockets",
     "numpy < 2.0.0",
     "sqlmodel",
@@ -42,16 +47,16 @@ include-package-data = true
 
 
 [tool.setuptools.dynamic]
-version = {attr = "autogenstudio.version.VERSION"}
+version = {attr = "backend.version.VERSION"}
 readme = {file = ["README.md"]}
 
 [tool.setuptools.packages.find]
-include = ["autogenstudio*"]
+include = ["backend*"]
 exclude = ["*.tests*"]
 namespaces = false
 
 [tool.setuptools.package-data]
-"autogenstudio" = ["*.*"]
+"backend" = ["*.*"]
 
 [tool.pytest.ini_options]
 filterwarnings = [
@@ -65,4 +70,4 @@ filterwarnings = [
 "Bug Tracker" = "https://github.com/microsoft/autogen/issues"
 
 [project.scripts]
-autogenstudio = "autogenstudio.cli:run"
+backend = "backend.cli:run"

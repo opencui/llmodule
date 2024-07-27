@@ -8,7 +8,7 @@ import {
 } from "@heroicons/react/24/outline";
 import React, { ReactNode, useEffect, useRef, useState } from "react";
 import Icon from "./icons";
-import { Modal, Table, Tooltip, theme } from "antd";
+import { Modal, Table, Tooltip, theme, Button } from "antd";
 import Editor from "@monaco-editor/react";
 import Papa from "papaparse";
 import remarkGfm from "remark-gfm";
@@ -74,9 +74,8 @@ export const IconButton = ({
     <span
       role={"button"}
       onClick={onClick}
-      className={`inline-block mr-2 hover:text-accent transition duration-300 ${className} ${
-        active ? "border-accent border rounded text-accent" : ""
-      }`}
+      className={`inline-block mr-2 hover:text-accent transition duration-300 ${className} ${active ? "border-accent border rounded text-accent" : ""
+        }`}
     >
       {icon}
     </span>
@@ -168,9 +167,8 @@ export const CollapseBox = ({
         onClick={() => {
           setIsOpen(!isOpen);
         }}
-        className={`cursor-pointer bg-secondary p-2 rounded ${
-          isOpen ? "rounded-b-none " : " "
-        }"}`}
+        className={`cursor-pointer bg-secondary p-2 rounded ${isOpen ? "rounded-b-none " : " "
+          }"}`}
       >
         {isOpen && <ChevronUpIcon className={chevronClass} />}
         {!isOpen && <ChevronDownIcon className={chevronClass} />}
@@ -557,26 +555,41 @@ export const ControlRowView = ({
   control,
   className,
   truncateLength = 20,
+  extra,
+  titleExtra
 }: {
   title: string;
   description: string;
   value: string | number | boolean;
+  titleExtra?: ReactNode;
   control: any;
   className?: string;
   truncateLength?: number;
+  extra?: ReactNode
 }) => {
   return (
-    <div className={`${className}`}>
-      <div>
-        <span className="text-primary inline-block">{title} </span>
-        <span className="text-xs ml-1 text-accent -mt-2 inline-block">
-          {truncateText(value + "", truncateLength)}
-        </span>{" "}
-        <Tooltip title={description}>
-          <InformationCircleIcon className="text-gray-400 inline-block w-4 h-4" />
-        </Tooltip>
+    <div className={`ni-group ${className}`}>
+      <div className="ni-group-header flex justify-between items-center">
+        <span className="ni-group-title-wrapper">
+          <span className="title-line" />
+          <span className="text-primary inline-block">{title} </span>
+          <span className="text-xs ml-1 text-accent -mt-2 inline-block">
+            {truncateText(value + "", truncateLength)}
+          </span>{" "}
+          {description && description.length &&
+            <Tooltip title={description}>
+              <InformationCircleIcon className="text-gray-400 inline-block w-4 h-4" />
+            </Tooltip>
+          }
+          {
+            titleExtra && <span className="ml-2">{titleExtra}</span> || ""
+          }
+        </span>
+        <span className="self-end">{extra}</span>
       </div>
-      {control}
+      <div className="pt-2">
+        {control}
+      </div>
       <div className="bordper-b  border-secondary border-dashed pb-2 mxp-2"></div>
     </div>
   );
@@ -620,9 +633,8 @@ export const ImageLoader = ({
       <img
         alt="Dynamic content"
         src={src}
-        className={`w-full  rounded ${
-          isLoading ? "opacity-0" : "opacity-100"
-        } ${className}`}
+        className={`w-full  rounded ${isLoading ? "opacity-0" : "opacity-100"
+          } ${className}`}
         onLoad={() => setIsLoading(false)}
       />
     </div>

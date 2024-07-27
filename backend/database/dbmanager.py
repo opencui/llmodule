@@ -49,7 +49,9 @@ class DBManager:
 
         with Session(self.engine) as session:
             try:
-                existing_model = session.exec(select(model_class).where(model_class.id == model.id)).first()
+                existing_model = session.exec(
+                    select(model_class).where(model_class.id == model.id)
+                ).first()
                 if existing_model:
                     model.updated_at = datetime.now()
                     for key, value in model.model_dump().items():
@@ -61,6 +63,7 @@ class DBManager:
                 session.commit()
                 session.refresh(model)
             except Exception as e:
+                print(e)
                 session.rollback()
                 logger.error("Error while upserting %s", e)
                 status = False
@@ -78,7 +81,10 @@ class DBManager:
         return response
 
     def _model_to_dict(self, model_obj):
-        return {col.name: getattr(model_obj, col.name) for col in model_obj.__table__.columns}
+        return {
+            col.name: getattr(model_obj, col.name)
+            for col in model_obj.__table__.columns
+        }
 
     def get_items(
         self,
@@ -95,7 +101,9 @@ class DBManager:
 
         try:
             if filters:
-                conditions = [getattr(model_class, col) == value for col, value in filters.items()]
+                conditions = [
+                    getattr(model_class, col) == value for col, value in filters.items()
+                ]
                 statement = select(model_class).where(and_(*conditions))
 
                 if hasattr(model_class, "created_at") and order:
@@ -107,7 +115,9 @@ class DBManager:
                 statement = select(model_class)
 
             if return_json:
-                result = [self._model_to_dict(row) for row in session.exec(statement).all()]
+                result = [
+                    self._model_to_dict(row) for row in session.exec(statement).all()
+                ]
             else:
                 result = session.exec(statement).all()
             status_message = f"{model_class.__name__} Retrieved Successfully"
@@ -146,8 +156,13 @@ class DBManager:
         with Session(self.engine) as session:
             try:
                 if filters:
-                    conditions = [getattr(model_class, col) == value for col, value in filters.items()]
-                    row = session.exec(select(model_class).where(and_(*conditions))).all()
+                    conditions = [
+                        getattr(model_class, col) == value
+                        for col, value in filters.items()
+                    ]
+                    row = session.exec(
+                        select(model_class).where(and_(*conditions))
+                    ).all()
                 else:
                     row = session.exec(select(model_class)).all()
                 if row:
@@ -207,13 +222,19 @@ class DBManager:
             try:
                 if link_type == "agent_model":
                     # get the agent
-                    agent = self.get_items(Agent, filters={"id": primary_id}, session=session).data[0]
+                    agent = self.get_items(
+                        Agent, filters={"id": primary_id}, session=session
+                    ).data[0]
                     linked_entities = agent.models
                 elif link_type == "agent_skill":
-                    agent = self.get_items(Agent, filters={"id": primary_id}, session=session).data[0]
+                    agent = self.get_items(
+                        Agent, filters={"id": primary_id}, session=session
+                    ).data[0]
                     linked_entities = agent.skills
                 elif link_type == "agent_agent":
-                    agent = self.get_items(Agent, filters={"id": primary_id}, session=session).data[0]
+                    agent = self.get_items(
+                        Agent, filters={"id": primary_id}, session=session
+                    ).data[0]
                     linked_entities = agent.agents
                 elif link_type == "workflow_agent":
                     linked_entities = session.exec(
@@ -272,8 +293,12 @@ class DBManager:
             with Session(self.engine) as session:
                 try:
                     if link_type == "agent_model":
-                        primary_model = session.exec(select(Agent).where(Agent.id == primary_id)).first()
-                        secondary_model = session.exec(select(Model).where(Model.id == secondary_id)).first()
+                        primary_model = session.exec(
+                            select(Agent).where(Agent.id == primary_id)
+                        ).first()
+                        secondary_model = session.exec(
+                            select(Model).where(Model.id == secondary_id)
+                        ).first()
                         if primary_model is None or secondary_model is None:
                             status = False
                             status_message = "One or both entity records do not exist."
@@ -296,8 +321,12 @@ class DBManager:
                             else:
                                 primary_model.models.append(secondary_model)
                     elif link_type == "agent_agent":
-                        primary_model = session.exec(select(Agent).where(Agent.id == primary_id)).first()
-                        secondary_model = session.exec(select(Agent).where(Agent.id == secondary_id)).first()
+                        primary_model = session.exec(
+                            select(Agent).where(Agent.id == primary_id)
+                        ).first()
+                        secondary_model = session.exec(
+                            select(Agent).where(Agent.id == secondary_id)
+                        ).first()
                         if primary_model is None or secondary_model is None:
                             status = False
                             status_message = "One or both entity records do not exist."
@@ -321,8 +350,12 @@ class DBManager:
                                 primary_model.agents.append(secondary_model)
 
                     elif link_type == "agent_skill":
-                        primary_model = session.exec(select(Agent).where(Agent.id == primary_id)).first()
-                        secondary_model = session.exec(select(Skill).where(Skill.id == secondary_id)).first()
+                        primary_model = session.exec(
+                            select(Agent).where(Agent.id == primary_id)
+                        ).first()
+                        secondary_model = session.exec(
+                            select(Skill).where(Skill.id == secondary_id)
+                        ).first()
                         if primary_model is None or secondary_model is None:
                             status = False
                             status_message = "One or both entity records do not exist."
@@ -345,8 +378,12 @@ class DBManager:
                             else:
                                 primary_model.skills.append(secondary_model)
                     elif link_type == "workflow_agent":
-                        primary_model = session.exec(select(Workflow).where(Workflow.id == primary_id)).first()
-                        secondary_model = session.exec(select(Agent).where(Agent.id == secondary_id)).first()
+                        primary_model = session.exec(
+                            select(Workflow).where(Workflow.id == primary_id)
+                        ).first()
+                        secondary_model = session.exec(
+                            select(Agent).where(Agent.id == secondary_id)
+                        ).first()
                         if primary_model is None or secondary_model is None:
                             status = False
                             status_message = "One or both entity records do not exist."

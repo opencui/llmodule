@@ -5,9 +5,13 @@ autogenstudio/test
 autogenstudio/web/files/ui/*
 OAI_CONFIG_LIST
 scratch/
+backend/web/workdir/*
+backend/web/ui/*
+backend/web/skills/user/*
 autogenstudio/web/workdir/*
 autogenstudio/web/ui/*
 autogenstudio/web/skills/user/*
+frontend/yarn-error.log
 .release.sh
 
 # Byte-compiled / optimized / DLL files
@@ -23,3 +27,4 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+build/

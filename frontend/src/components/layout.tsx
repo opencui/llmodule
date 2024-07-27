@@ -39,9 +39,8 @@ const Layout = ({
 
   const { darkMode } = React.useContext(appContext);
   React.useEffect(() => {
-    document.getElementsByTagName("html")[0].className = `${
-      darkMode === "dark" ? "dark bg-primary" : "light bg-primary"
-    } `;
+    document.getElementsByTagName("html")[0].className = `${darkMode === "dark" ? "dark bg-primary" : "light bg-primary"
+      } `;
   }, [darkMode]);
 
   return (

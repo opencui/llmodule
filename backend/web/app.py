@@ -1,22 +1,47 @@
 import asyncio
+import string
+import random
 import os
 import queue
 import threading
 import traceback
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, Collection
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from openai import OpenAIError
+from pydantic_core import SchemaValidator
+from sqlalchemy.sql.elements import CollectionAggregate
+from starlette.datastructures import UploadFile
+from typing import List
+
 
 from ..chatmanager import AutoGenChatManager, WebSocketConnectionManager
 from ..database import workflow_from_id
 from ..database.dbmanager import DBManager
-from ..datamodel import Agent, Message, Model, Response, Session, Skill, Workflow
-from ..utils import check_and_cast_datetime_fields, init_app_folders, md5_hash, test_model
+from ..datamodel import (
+    Agent,
+    Message,
+    Model,
+    Response,
+    Session,
+    Skill,
+    Workflow,
+    Schema,
+    SchemaField,
+    Collections,
+    CollectionRow,
+    Implementation,
+)
+from ..utils import (
+    check_and_cast_datetime_fields,
+    init_app_folders,
+    md5_hash,
+    test_model,
+)
 from ..version import VERSION
 
 managers = {"chat": None}  # manage calls to autogen
@@ -58,6 +83,8 @@ message_handler_thread.start()
 app_file_path = os.path.dirname(os.path.abspath(__file__))
 folders = init_app_folders(app_file_path)
 ui_folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui")
+print(ui_folder_path)
+
 
 database_engine_uri = folders["database_engine_uri"]
 dbmanager = DBManager(engine_uri=database_engine_uri)
@@ -119,7 +146,8 @@ def create_entity(model: Any, model_class: Any, filters: dict = None):
         print(ex_error)
         return {
             "status": False,
-            "message": f"Error occurred while creating {model_class.__name__}: " + str(ex_error),
+            "message": f"Error occurred while creating {model_class.__name__}: "
+            + str(ex_error),
         }
 
 
@@ -130,13 +158,162 @@ def list_entity(
     order: str = "desc",
 ):
     """List all entities for a user"""
-    return dbmanager.get(model_class, filters=filters, return_json=return_json, order=order)
+    return dbmanager.get(
+        model_class, filters=filters, return_json=return_json, order=order
+    )
 
 
 def delete_entity(model_class: Any, filters: dict = None):
     """Delete an entity"""
 
     return dbmanager.delete(filters=filters, model_class=model_class)
+
+
+@api.get("/schemas")
+async def list_schema(user_id: str, schema_id: None | str = None):
+    """List all schemas for a user"""
+    filters = {
+        "user_id": user_id,
+        "isHide": False,
+    }
+    if schema_id is not None:
+        filters["id"] = schema_id
+        del filters["isHide"]
+    return list_entity(Schema, filters=filters)
+
+
+@api.post("/schemas")
+async def create_or_update_schema(schema: Schema):
+    """Create or update one schema"""
+    return create_entity(schema, Schema, {})
+
+
+@api.delete("/schemas/delete")
+async def delete_schema(user_id: str, schema_id: str):
+    """Delete a schema"""
+    filters = {"id": schema_id, "user_id": user_id}
+    return delete_entity(Schema, filters=filters)
+
+
+@api.get("/collections")
+async def list_collections(user_id: str, collection_id: None | int = None):
+    """List all collections for a user"""
+    filters = {"user_id": user_id}
+    if collection_id is not None:
+        filters["collection_id"] = collection_id
+    return list_entity(Collections, filters=filters)
+
+
+@api.post("/collections")
+async def create_or_update_collections(
+    req: Request,
+    with_csv: bool = False,
+):
+    """Create or update one collection"""
+    if with_csv:
+        body = await req.form()
+
+        data = {}
+        file: str | None | UploadFile = None
+        schema: None | Schema = None
+
+        for k in body.keys():
+            if k == "files[]":
+                file = body.get(k)
+            else:
+                data[k] = body.get(k)
+
+        if type(file) != UploadFile:
+            return
+
+        collection = None
+        collection_id: None | int = None
+        keys: List = []
+
+        for i, line in enumerate(file.file.readlines()):
+            buf = [s.decode("utf-8") for s in line.strip().split(b",")]
+            if i == 0:
+                user_id = data["user_id"]
+                name = "".join(
+                    random.choices(string.ascii_uppercase + string.digits, k=10)
+                )
+
+                description = "".join(
+                    random.choices(string.ascii_uppercase + string.digits, k=10)
+                )
+
+                fields: List[SchemaField] = [
+                    SchemaField(name=s, description=s).dict() for s in buf
+                ]
+
+                schema = Schema(
+                    name=name,
+                    description=description,
+                    user_id=user_id,
+                    fields=fields,
+                    isHide=True,
+                )
+
+                data["schema_id"] = create_entity(schema, Schema, {})["data"]["id"]
+
+                collection = create_entity(Collections(**data), Collections, {})
+                collection_id = collection.get("data", {}).get("id", None)
+
+                keys = buf
+            else:
+                if isinstance(collection_id, int):
+                    create_entity(
+                        CollectionRow(
+                            collection_id=collection_id, data=dict(zip(keys, buf))
+                        ),
+                        CollectionRow,
+                        {},
+                    )
+
+        return collection
+
+    data = await req.json()
+    return create_entity(Collections(**data), Collections, {})
+
+
+@api.delete("/collections/delete")
+async def delete_collection(user_id: str, collection_id: int):
+    """Delete a collection"""
+    filters = {"id": collection_id, "user_id": user_id}
+    return delete_entity(Collections, filters=filters)
+
+
+@api.get("/collection_rows")
+async def list_collection_rows(collection_id: None | int = None):
+    """List all collection_rows"""
+    filters = {}
+    if collection_id is not None:
+        filters["collection_id"] = collection_id
+    return list_entity(CollectionRow, filters=filters)
+
+
+@api.post("/collection_rows")
+async def create_or_update_collection_rows(
+    collection_row: CollectionRow,
+):
+    """Create or update one collection_row"""
+    return create_entity(collection_row, CollectionRow, {})
+
+
+@api.delete("/collection_rows/delete")
+async def delete_collection_row(collection_id: int, row_id: int):
+    """Delete a collection_row"""
+    filters = {"id": row_id, "collection_id": collection_id}
+    return delete_entity(CollectionRow, filters=filters)
+
+
+@api.get("/implementation")
+async def list_implementation(agent_id: None | int = None):
+    filters = {}
+    if agent_id is not None:
+        filters["agent_id"] = agent_id
+
+    return list_entity(Implementation, filters=filters)
 
 
 @api.get("/skills")
@@ -220,13 +397,17 @@ async def delete_agent(agent_id: int, user_id: str):
 @api.post("/agents/link/model/{agent_id}/{model_id}")
 async def link_agent_model(agent_id: int, model_id: int):
     """Link a model to an agent"""
-    return dbmanager.link(link_type="agent_model", primary_id=agent_id, secondary_id=model_id)
+    return dbmanager.link(
+        link_type="agent_model", primary_id=agent_id, secondary_id=model_id
+    )
 
 
 @api.delete("/agents/link/model/{agent_id}/{model_id}")
 async def unlink_agent_model(agent_id: int, model_id: int):
     """Unlink a model from an agent"""
-    return dbmanager.unlink(link_type="agent_model", primary_id=agent_id, secondary_id=model_id)
+    return dbmanager.unlink(
+        link_type="agent_model", primary_id=agent_id, secondary_id=model_id
+    )
 
 
 @api.get("/agents/link/model/{agent_id}")
@@ -238,13 +419,17 @@ async def get_agent_models(agent_id: int):
 @api.post("/agents/link/skill/{agent_id}/{skill_id}")
 async def link_agent_skill(agent_id: int, skill_id: int):
     """Link an a skill to an agent"""
-    return dbmanager.link(link_type="agent_skill", primary_id=agent_id, secondary_id=skill_id)
+    return dbmanager.link(
+        link_type="agent_skill", primary_id=agent_id, secondary_id=skill_id
+    )
 
 
 @api.delete("/agents/link/skill/{agent_id}/{skill_id}")
 async def unlink_agent_skill(agent_id: int, skill_id: int):
     """Unlink an a skill from an agent"""
-    return dbmanager.unlink(link_type="agent_skill", primary_id=agent_id, secondary_id=skill_id)
+    return dbmanager.unlink(
+        link_type="agent_skill", primary_id=agent_id, secondary_id=skill_id
+    )
 
 
 @api.get("/agents/link/skill/{agent_id}")
@@ -381,7 +566,9 @@ async def run_session_workflow(message: Message, session_id: int, workflow_id: i
         )
         # save incoming message
         dbmanager.upsert(message)
-        user_dir = os.path.join(folders["files_static_root"], "user", md5_hash(message.user_id))
+        user_dir = os.path.join(
+            folders["files_static_root"], "user", md5_hash(message.user_id)
+        )
         os.makedirs(user_dir, exist_ok=True)
         workflow = workflow_from_id(workflow_id, dbmanager=dbmanager)
         agent_response: Message = managers["chat"].chat(
@@ -420,7 +607,9 @@ async def process_socket_message(data: dict, websocket: WebSocket, client_id: st
         user_message = Message(**data["data"])
         session_id = data["data"].get("session_id", None)
         workflow_id = data["data"].get("workflow_id", None)
-        response = await run_session_workflow(message=user_message, session_id=session_id, workflow_id=workflow_id)
+        response = await run_session_workflow(
+            message=user_message, session_id=session_id, workflow_id=workflow_id
+        )
         response_socket_message = {
             "type": "agent_response",
             "data": response,
